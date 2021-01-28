@@ -461,6 +461,7 @@ BatchedCommandRequest BatchWriteOp::buildBatchRequest(
         wcb.setBypassDocumentValidation(
             _clientRequest.getWriteCommandBase().getBypassDocumentValidation());
         wcb.setOrdered(_clientRequest.getWriteCommandBase().getOrdered());
+        wcb.setOplogAudit(_clientRequest.getWriteCommandBase().getOplogAudit());
 
         if (_batchTxnNum) {
             wcb.setStmtIds(std::move(stmtIdsForOp));

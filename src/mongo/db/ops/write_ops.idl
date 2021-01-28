@@ -70,6 +70,10 @@ structs:
                               implicitly generated based on their offset, starting from 0."
                 type: array<int>
                 optional: true
+            oplogAudit:
+                type: string
+                optional: true
+                description: "Extra auditing data"
 
     UpdateOpEntry:
         description: "Parser for the entries in the 'updates' array of an update command."

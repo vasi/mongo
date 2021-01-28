@@ -35,6 +35,7 @@
 #include "mongo/db/service_entry_point_mongod.h"
 
 #include "mongo/base/checked_cast.h"
+#include "mongo/bson/util/bson_extract.h"
 #include "mongo/db/audit.h"
 #include "mongo/db/auth/authorization_session.h"
 #include "mongo/db/auth/impersonation_session.h"
@@ -480,6 +481,10 @@ bool runCommandImpl(OperationContext* opCtx,
 
         result = command->publicRun(opCtx, request, inPlaceReplyBob);
     } else {
+        if (cmd.hasField("oplogAudit")) {
+            opCtx->setOplogAudit(cmd.getStringField("oplogAudit"));
+        }
+
         auto wcResult = extractWriteConcern(opCtx, cmd, db);
         if (!wcResult.isOK()) {
             auto result = Command::appendCommandStatus(inPlaceReplyBob, wcResult.getStatus());

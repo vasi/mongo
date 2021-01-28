@@ -6,7 +6,7 @@
  */
 
 "use strict";
-var replTest = new ReplSetTest({nodes: 1, oplogSize: 2, nodeOptions: {smallfiles: ""}});
+var replTest = new ReplSetTest({nodes: 2, oplogSize: 2, nodeOptions: {smallfiles: ""}});
 var nodes = replTest.startSet();
 replTest.initiate();
 var master = replTest.getPrimary();
@@ -174,5 +174,55 @@ res = assert.writeOK(
 assert.eq(res.nModified, 1, "update failed for '" + msg + "': " + res.toString());
 assert.docEq({_id: 1, a: {b: [{c: 1}, {c: -1}]}}, coll.findOne({}), msg);
 assertLastOplog({$v: 1, $set: {"a.b": [{c: 1}, {c: -1}]}}, {_id: 1}, msg);
+
+// Tests for audit information
+var assertLastOplogsHaveAudit = function(member, count, audit, msg) {
+    var oplogs = member.getDB("local").oplog.rs.find({op: {$ne: 'n'}}).limit(count).sort({$natural: -1}).toArray();
+    for (var oplog of oplogs) {
+      assert.eq(oplog.ns, coll.getFullName(), "ns bad : " + msg);
+      assert.eq(oplog.oplogAudit, audit, "oplogAudit bad : " + msg);
+    }
+};
+
+cdb.runCommand({
+  insert: coll.getName(),
+  documents: [{_id: 300}, {_id: 301}],
+  oplogAudit: "{'action_id': 'foo/101'}"
+});
+assertLastOplogsHaveAudit(master, 2, "{'action_id': 'foo/101'}", "audit insert");
+
+cdb.runCommand({
+  update: coll.getName(),
+  updates: [
+    {q: {_id: 300}, u: {foo: 1}},
+    {q: {_id: 301}, u: {$set: {bar: 2}}}
+  ],
+  oplogAudit: "{'action_id': 'foo/102'}"
+});
+assertLastOplogsHaveAudit(master, 2, "{'action_id': 'foo/102'}", "audit update");
+
+cdb.runCommand({
+  findAndModify: coll.getName(),
+  query: {foo: 1},
+  update: {$inc: {foo: 1}},
+  oplogAudit: "{'action_id': 'foo/103'}"
+});
+assertLastOplogsHaveAudit(master, 1, "{'action_id': 'foo/103'}", "audit findAndModify");
+
+cdb.runCommand({
+  delete: coll.getName(),
+  deletes: [{q: {_id: {$in: [300, 301]}}, limit: 0}],
+  oplogAudit: "{'action_id': 'foo/104'}"
+});
+assertLastOplogsHaveAudit(master, 2, "{'action_id': 'foo/104'}", "audit delete");
+
+replTest.awaitLastOpCommitted();
+assertLastOplogsHaveAudit(replTest.getSecondary(), 2, "{'action_id': 'foo/104'}", "audit delete on secondaries");
+
+// noop records should not have oplogAudit
+var noops = master.getDB("local").oplog.rs.find({op: 'n'}).sort({$natural: -1}).limit(7).toArray();
+for (var noop of noops) {
+    assert.isnull(noop.oplogAudit, "noop records should not have oplogAudit");
+}
 
 replTest.stopSet();

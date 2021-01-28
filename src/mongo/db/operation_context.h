@@ -413,6 +413,15 @@ public:
      */
     Microseconds getRemainingMaxTimeMicros() const;
 
+    void setOplogAudit(StringData data) {
+        _oplogAudit = data;
+    }
+
+    StringData getOplogAudit() const {
+        return _oplogAudit;
+    }
+
+
 private:
     /**
      * Returns true if this operation has a deadline and it has passed according to the fast clock
@@ -492,6 +501,8 @@ private:
     Timer _elapsedTime;
 
     bool _writesAreReplicated = true;
+
+    StringData _oplogAudit;
 };
 
 class WriteUnitOfWork {

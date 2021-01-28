@@ -498,6 +498,7 @@ public:
             arg == "writeConcern" ||                     //
             arg == "lsid" ||                             //
             arg == "txnNumber" ||                        //
+            arg == "oplogAudit" ||                       //
             false;  // These comments tell clang-format to keep this line-oriented.
     }
 

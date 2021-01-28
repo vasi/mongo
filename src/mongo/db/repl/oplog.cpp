@@ -359,6 +359,13 @@ OplogDocWriter _logOpWriter(OperationContext* opCtx,
     if (o2)
         b.append("o2", *o2);
 
+    if (strcmp(opstr, "n") != 0) {
+        StringData oplogAudit = opCtx->getOplogAudit();
+        if (!oplogAudit.empty()) {
+            b.append("oplogAudit", oplogAudit);
+        }
+    }
+
     invariant(wallTime != Date_t{});
     b.appendDate("wall", wallTime);
 
